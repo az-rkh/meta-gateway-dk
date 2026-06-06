@@ -1,62 +1,63 @@
 # meta-gateway-dk
 
-A Yocto BSP layer for the **LS1046A Gateway Development Kit**, an embedded gateway board based on the NXP LS1046A (QorIQ, quad-core Cortex-A72). This layer produces a minimal recovery initramfs used for rescue, provisioning, and factory operations.
+Yocto BSP layer for the LS1046A Gateway Development Kit — a gateway board built around the NXP LS1046A. The goal of this layer is a small recovery initramfs that can be used to rescue, provision, or re-flash the board.
 
 ---
 
 ## Hardware
 
-| Property | Value |
+| | |
 |---|---|
 | SoC | NXP LS1046A (QorIQ) |
-| CPU | Quad-core Arm Cortex-A72 |
-| Architecture | AArch64 (ARMv8-A) |
-| Serial console | `ttyS0` / `ttyAMA0` @ 115200 baud |
+| CPU | Quad-core Cortex-A72 |
+| Architecture | AArch64 |
+| Serial console | `ttyS0` / `ttyAMA0` @ 115200 |
 | Kernel image | `Image.gz` |
 | Device tree | `freescale/ls1046a-gateway.dk.dtb` |
 
 ---
 
-## What This Layer Builds
+## What gets built
 
-A compressed initramfs (`cpio.gz`) bundled with the kernel, containing:
+A `cpio.gz` initramfs bundled with the kernel. It includes:
 
-- BusyBox userspace (init, shell, core utilities)
-- Networking: `curl`, `wget`
-- Storage tools: `parted`, `fdisk`, `lsblk`, `blkid`, `e2fsprogs`, `mmc-utils`, `mtd-utils`
-- Hardware debug: `i2c-tools`, `kmod`, `udev`
-- No systemd, no package manager, no root password
+- BusyBox (init, shell, utilities)
+- `curl`, `wget`
+- `parted`, `fdisk`, `lsblk`, `blkid`, `e2fsprogs`, `mmc-utils`, `mtd-utils`
+- `i2c-tools`, `kmod`, `udev`
+
+No systemd, no package manager, no root password.
 
 ---
 
-## Layer Structure
+## Layer structure
 
 ```
 meta-gateway-dk/
 ├── conf/
-│   ├── layer.conf               # Layer registration (scarthgap, priority 10)
+│   ├── layer.conf               # scarthgap, priority 10
 │   ├── machine/
-│   │   └── gateway-dk.conf      # Machine definition for NXP LS1046A
+│   │   └── gateway-dk.conf      # machine definition (LS1046A)
 │   └── distro/
-│       └── recovery.conf        # Minimal distro (glibc, BusyBox init)
+│       └── recovery.conf        # minimal distro, BusyBox init
 ├── kas/
-│   └── firmware.yaml            # KAS manifest for reproducible builds
+│   └── firmware.yaml            # KAS manifest
 ├── recipes-core/
 │   └── images/
-│       └── recovery-image.bb    # Initramfs image recipe
+│       └── recovery-image.bb    # initramfs image
 └── recipes-kernel/
     └── linux/
-        ├── linux-ls1046a_6.12.bb   # Kernel recipe (NXP QorIQ fork, v6.12.34)
+        ├── linux-ls1046a_6.12.bb   # kernel recipe (NXP QorIQ fork, v6.12.34)
         └── files/
-            ├── defconfig        # Kernel config
-            └── ls1046a-gateway-dk.dts  # Custom device tree source
+            ├── defconfig
+            └── ls1046a-gateway-dk.dts
 ```
 
 ---
 
 ## Dependencies
 
-| Dependency | Branch / Version |
+| | |
 |---|---|
 | openembedded-core | `scarthgap` |
 | bitbake | `2.8` |
@@ -65,54 +66,37 @@ meta-gateway-dk/
 
 ## Building
 
-This layer uses [KAS](https://kas.readthedocs.io) for reproducible builds. KAS fetches all dependencies automatically.
-
-**Install KAS:**
+Builds are managed with [KAS](https://kas.readthedocs.io), which handles fetching all dependencies.
 
 ```bash
 pip install kas
-```
-
-**Build the firmware:**
-
-```bash
 kas build kas/firmware.yaml
 ```
 
-The output will be at:
-
-```
-build/tmp/deploy/images/gateway-dk/
-```
-
-Look for `Image.gz` — this is the kernel with the initramfs bundled inside.
+Output lands in `build/tmp/deploy/images/gateway-dk/`. The file you want is `Image.gz` — that's the kernel with the initramfs baked in.
 
 ---
 
 ## Kernel
 
-- **Source:** NXP QorIQ Linux fork (`github.com/nxp-qoriq/linux`, branch `lf-6.12.y`)
-- **Version:** 6.12.34
-- **Pinned revision:** `be78e49cb4339fd38c9a40019df49b72fbb8bcb7`
-- **Custom DTS:** `ls1046a-gateway-dk.dts` is injected into `arch/arm64/boot/dts/freescale/` at build time
+Sourced from the NXP QorIQ Linux fork, branch `lf-6.12.y`, pinned to:
 
-To update the kernel revision, change `SRCREV` in [recipes-kernel/linux/linux-ls1046a_6.12.bb](recipes-kernel/linux/linux-ls1046a_6.12.bb).
+```
+be78e49cb4339fd38c9a40019df49b72fbb8bcb7  (v6.12.34)
+```
+
+The custom DTS (`ls1046a-gateway-dk.dts`) gets copied into `arch/arm64/boot/dts/freescale/` during the build — it's not upstream yet. To move to a newer kernel commit, update `SRCREV` in [recipes-kernel/linux/linux-ls1046a_6.12.bb](recipes-kernel/linux/linux-ls1046a_6.12.bb).
 
 ---
 
 ## Distro
 
-The `recovery` distro ([conf/distro/recovery.conf](conf/distro/recovery.conf)) is intentionally stripped down:
-
-- C library: `glibc`
-- Init system: BusyBox init (no systemd)
-- No GUI, no D-Bus, no extra distro features
-- Maintainer: Tomaz Zaman `<tomaz@mono.si>`
+`recovery` is a bare-minimum distro config: glibc, BusyBox init, nothing else. No D-Bus, no systemd, no GUI stack. The initramfs intentionally has no root password set.
 
 ---
 
-## Notes
+## What's not in git
 
-- `conf/site.conf` is excluded from version control — it holds machine-local path overrides
-- `build/` and `sources/` are excluded — fully reproducible via `kas build`
-- The initramfs has no root password by design (`empty-root-password` image feature)
+- `build/` — generated by BitBake, fully reproducible
+- `sources/` — fetched by KAS on first run
+- `conf/site.conf` — local machine overrides, not meant to be shared
