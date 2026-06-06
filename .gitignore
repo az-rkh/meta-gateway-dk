@@ -1,0 +1,11 @@
+# Yocto build output - fully reproducible via KAS
+build/
+
+# Fetched sources - managed by KAS
+sources/
+
+# KAS shell history
+.kas_shell_history
+
+# Site-specific config (machine-local paths, credentials)
+conf/site.conf
