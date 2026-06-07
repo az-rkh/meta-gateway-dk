@@ -1,4 +1,4 @@
-# meta-gateway-dk
+# meta-ls1046a-recovery
 
 Yocto BSP layer for the LS1046A Gateway Development Kit — a gateway board built around the NXP LS1046A. The goal of this layer is a small recovery initramfs that can be used to rescue, provision, or re-flash the board.
 
@@ -33,7 +33,7 @@ No systemd, no package manager, no root password.
 ## Layer structure
 
 ```
-meta-gateway-dk/
+meta-ls1046a-recovery/
 ├── conf/
 │   ├── layer.conf               # scarthgap, priority 10
 │   ├── machine/
